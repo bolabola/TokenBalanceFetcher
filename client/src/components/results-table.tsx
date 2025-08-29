@@ -343,6 +343,98 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                   </React.Fragment>
                 );
               })}
+              
+              {/* Summary Statistics Row */}
+              {results.length > 0 && (
+                <TableRow className="bg-primary/5 border-t-2 border-primary/20 font-semibold">
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm font-semibold text-primary">TOTALS</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground" data-testid="text-summary-btc-total">
+                        {(() => {
+                          const totalBtc = results
+                            .filter(r => r.status === "success" && r.data)
+                            .reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.balance?.btcHardBalanceSats || 0), 0);
+                          return `${totalBtc.toLocaleString()} sats`;
+                        })()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ${(() => {
+                          const totalBtcUsd = results
+                            .filter(r => r.status === "success" && r.data)
+                            .reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.balance?.btcValueUsdHard || 0), 0);
+                          return totalBtcUsd.toFixed(2);
+                        })()}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm font-semibold text-foreground" data-testid="text-summary-avg-tokens">
+                    {(() => {
+                      const successfulResults = results.filter(r => r.status === "success" && r.data);
+                      const avgTokens = successfulResults.length > 0 
+                        ? (successfulResults.reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.tokenCount || 0), 0) / successfulResults.length)
+                        : 0;
+                      return `${avgTokens.toFixed(1)} avg`;
+                    })()}
+                  </TableCell>
+                  <TableCell className="text-sm font-semibold text-foreground" data-testid="text-summary-total-transactions">
+                    {(() => {
+                      const totalTx = results
+                        .filter(r => r.status === "success" && r.data)
+                        .reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.transactionCount || 0), 0);
+                      return totalTx.toLocaleString();
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-semibold text-foreground" data-testid="text-summary-total-value-usd">
+                      ${(() => {
+                        const totalValueUsd = results
+                          .filter(r => r.status === "success" && r.data)
+                          .reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.totalValueUsd || 0), 0);
+                        return totalValueUsd.toFixed(2);
+                      })()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-accent" data-testid="text-summary-target-token-total">
+                        {(() => {
+                          const totalTargetBalance = results
+                            .filter(r => r.status === "success" && r.data && batchJob?.targetTokenAddress)
+                            .reduce((sum, r) => {
+                              const data = r.data as SparkscanResponse;
+                              const targetToken = data.tokens?.find(token => token.tokenAddress === batchJob?.targetTokenAddress);
+                              return sum + (targetToken ? targetToken.balance / Math.pow(10, targetToken.decimals) : 0);
+                            }, 0);
+                          return totalTargetBalance.toLocaleString();
+                        })()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {(() => {
+                          const firstTargetToken = results
+                            .filter(r => r.status === "success" && r.data && batchJob?.targetTokenAddress)
+                            .map(r => {
+                              const data = r.data as SparkscanResponse;
+                              return data.tokens?.find(token => token.tokenAddress === batchJob?.targetTokenAddress);
+                            })
+                            .find(token => token);
+                          return firstTargetToken?.ticker || '';
+                        })()}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs text-muted-foreground" data-testid="text-summary-count">
+                      {results.filter(r => r.status === "success").length} success / {results.length} total
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
