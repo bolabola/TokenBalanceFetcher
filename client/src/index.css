@@ -114,6 +114,11 @@
     white-space: nowrap;
   }
   
+  [data-compact="true"] th:first-child,
+  [data-compact="true"] td:first-child {
+    padding-left: 0.5rem !important;
+  }
+  
   [data-compact="true"] th {
     width: auto;
     min-width: fit-content;
