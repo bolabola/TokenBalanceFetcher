@@ -54,6 +54,48 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center space-x-2 mb-2 sm:mb-0">
+              <span>Created by</span>
+              <a 
+                href="https://twitter.com/token_garden" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+                data-testid="link-creator"
+              >
+                @token_garden
+              </a>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span>Supported by</span>
+              <a 
+                href="https://twitter.com/spark" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+                data-testid="link-spark"
+              >
+                @spark
+              </a>
+              <span>&</span>
+              <a 
+                href="https://twitter.com/flashnet" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+                data-testid="link-flashnet"
+              >
+                @flashnet
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
