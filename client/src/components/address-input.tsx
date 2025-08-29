@@ -19,7 +19,7 @@ interface AddressInputProps {
 // Predefined token options
 const PREDEFINED_TOKENS = [
   { ticker: "FSPKS", address: "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553", name: "FlashSparks" },
-  { ticker: "SNOW", address: "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws", name: "Snow" },
+  { ticker: "SNOW", address: "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws", name: "Snowflake" },
   { ticker: "UTXO", address: "btkn1pzvck7xzt96vj4h9agnyu493t7a9jdc4v3j2z3n3fs4cwlcq9yps2zgm4z", name: "UTXO" },
 ];
 
