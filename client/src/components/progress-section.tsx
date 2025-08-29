@@ -12,7 +12,8 @@ interface ProgressSectionProps {
 export default function ProgressSection({ batchJobId }: ProgressSectionProps) {
   const { data: batchJob } = useQuery<BatchJob>({
     queryKey: ["/api/batch-jobs", batchJobId],
-    refetchInterval: batchJob?.status === "processing" ? 2000 : false,
+    refetchInterval: 2000,
+    enabled: true,
   });
 
   if (!batchJob) {

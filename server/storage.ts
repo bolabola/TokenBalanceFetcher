@@ -28,6 +28,7 @@ export class MemStorage implements IStorage {
     const job: BatchJob = {
       ...insertJob,
       id,
+      status: insertJob.status || "pending",
       createdAt: new Date(),
       completedAt: null,
     };
@@ -59,6 +60,8 @@ export class MemStorage implements IStorage {
     const result: AddressResult = {
       ...insertResult,
       id,
+      status: insertResult.status || "pending",
+      data: insertResult.data || null,
       processedAt: new Date(),
     };
     this.addressResults.set(id, result);

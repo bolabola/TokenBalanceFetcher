@@ -76,13 +76,13 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
     return 0;
   });
 
-  const getTargetTokenBalance = (result: AddressResult): { balance: number; ticker: string } | null => {
+  const getTargetTokenBalance = (result: AddressResult): { balance: number; ticker: string; decimals: number } | null => {
     if (!result.data || !batchJob?.targetTokenAddress) return null;
     
     const data = result.data as SparkscanResponse;
     const targetToken = data.tokens?.find(token => token.tokenAddress === batchJob.targetTokenAddress);
     
-    return targetToken ? { balance: targetToken.balance, ticker: targetToken.ticker } : null;
+    return targetToken ? { balance: targetToken.balance, ticker: targetToken.ticker, decimals: targetToken.decimals } : null;
   };
 
   const formatBalance = (balance: number, decimals: number = 0): string => {
@@ -263,7 +263,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         {targetToken ? (
                           <div className="flex items-center space-x-2">
                             <span className="text-sm font-medium text-accent" data-testid={`text-target-token-balance-${result.id}`}>
-                              {targetToken.balance.toLocaleString()}
+                              {formatBalance(targetToken.balance, targetToken.decimals)}
                             </span>
                             <span className="text-xs text-muted-foreground">{targetToken.ticker}</span>
                           </div>
