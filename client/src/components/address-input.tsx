@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Keyboard, Upload, Play, Eraser } from "lucide-react";
+import { Keyboard, Upload, Play, Eraser, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,10 +16,19 @@ interface AddressInputProps {
   onBatchCreated: (batchJobId: string) => void;
 }
 
+// Predefined token options
+const PREDEFINED_TOKENS = [
+  { ticker: "FSPKS", address: "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553", name: "FlashSparks" },
+  { ticker: "SNOW", address: "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws", name: "Snow" },
+  { ticker: "UTXO", address: "btkn1pzvck7xzt96vj4h9agnyu493t7a9jdc4v3j2z3n3fs4cwlcq9yps2zgm4z", name: "UTXO" },
+];
+
 export default function AddressInput({ onBatchCreated }: AddressInputProps) {
   const [activeTab, setActiveTab] = useState<"manual" | "upload">("manual");
   const [addresses, setAddresses] = useState("");
-  const [targetTokenAddress, setTargetTokenAddress] = useState("");
+  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
+  const [customTokenAddress, setCustomTokenAddress] = useState("");
+  const [showCustomToken, setShowCustomToken] = useState(false);
   const [rateLimit, setRateLimit] = useState("5");
   const [file, setFile] = useState<File | null>(null);
   const { toast } = useToast();
@@ -72,10 +83,13 @@ export default function AddressInput({ onBatchCreated }: AddressInputProps) {
     }
 
     try {
-      // Create batch job
+      // Create batch job with the first selected token (for now, keeping single token compatibility)
+      const targetTokenAddress = selectedTokens.length > 0 ? selectedTokens[0] : 
+                                (customTokenAddress ? customTokenAddress : undefined);
+      
       const batchJob = await createBatchMutation.mutateAsync({
         name: `Batch ${new Date().toLocaleString()}`,
-        targetTokenAddress: targetTokenAddress || undefined,
+        targetTokenAddress: targetTokenAddress,
         rateLimit: parseInt(rateLimit),
         totalAddresses: addressList.length,
       });
@@ -101,9 +115,31 @@ export default function AddressInput({ onBatchCreated }: AddressInputProps) {
     }
   };
 
+  const handleTokenToggle = (tokenAddress: string) => {
+    setSelectedTokens(prev => 
+      prev.includes(tokenAddress) 
+        ? prev.filter(addr => addr !== tokenAddress)
+        : [...prev, tokenAddress]
+    );
+  };
+
+  const handleAddCustomToken = () => {
+    if (customTokenAddress && !selectedTokens.includes(customTokenAddress)) {
+      setSelectedTokens(prev => [...prev, customTokenAddress]);
+      setCustomTokenAddress("");
+      setShowCustomToken(false);
+    }
+  };
+
+  const handleRemoveToken = (tokenAddress: string) => {
+    setSelectedTokens(prev => prev.filter(addr => addr !== tokenAddress));
+  };
+
   const handleClear = () => {
     setAddresses("");
-    setTargetTokenAddress("");
+    setSelectedTokens([]);
+    setCustomTokenAddress("");
+    setShowCustomToken(false);
     setFile(null);
     const fileInput = document.getElementById("file-input") as HTMLInputElement;
     if (fileInput) {
@@ -157,20 +193,113 @@ export default function AddressInput({ onBatchCreated }: AddressInputProps) {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* Target Tokens Selection */}
               <div>
-                <Label htmlFor="target-token" className="block text-sm font-medium text-foreground mb-2">
-                  Target Token Address (optional)
+                <Label className="block text-sm font-medium text-foreground mb-3">
+                  Target Tokens (optional)
                 </Label>
-                <Input
-                  id="target-token"
-                  type="text"
-                  placeholder="btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553"
-                  value={targetTokenAddress}
-                  onChange={(e) => setTargetTokenAddress(e.target.value)}
-                  data-testid="input-target-token"
-                />
+                
+                {/* Predefined Tokens */}
+                <div className="space-y-3">
+                  <div className="text-xs font-medium text-muted-foreground mb-2">Popular Tokens</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {PREDEFINED_TOKENS.map((token) => (
+                      <div key={token.address} className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id={token.address}
+                          checked={selectedTokens.includes(token.address)}
+                          onCheckedChange={() => handleTokenToggle(token.address)}
+                          data-testid={`checkbox-token-${token.ticker}`}
+                        />
+                        <Label htmlFor={token.address} className="flex-1 cursor-pointer">
+                          <div className="font-medium text-foreground">{token.ticker}</div>
+                          <div className="text-xs text-muted-foreground">{token.name}</div>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Token Input */}
+                <div className="mt-4">
+                  {!showCustomToken ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCustomToken(true)}
+                      data-testid="button-add-custom-token"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Custom Token
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="text"
+                        placeholder="btkn1..."
+                        value={customTokenAddress}
+                        onChange={(e) => setCustomTokenAddress(e.target.value)}
+                        className="flex-1"
+                        data-testid="input-custom-token"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddCustomToken}
+                        disabled={!customTokenAddress}
+                        data-testid="button-confirm-custom-token"
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowCustomToken(false);
+                          setCustomTokenAddress("");
+                        }}
+                        data-testid="button-cancel-custom-token"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Tokens Display */}
+                {selectedTokens.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">Selected Tokens ({selectedTokens.length})</div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTokens.map((tokenAddress) => {
+                        const predefinedToken = PREDEFINED_TOKENS.find(t => t.address === tokenAddress);
+                        const displayName = predefinedToken ? predefinedToken.ticker : tokenAddress.slice(0, 8) + '...';
+                        
+                        return (
+                          <Badge key={tokenAddress} variant="secondary" className="flex items-center space-x-1">
+                            <span data-testid={`badge-selected-token-${displayName}`}>{displayName}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => handleRemoveToken(tokenAddress)}
+                              data-testid={`button-remove-token-${displayName}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Rate Limit */}
               <div>
                 <Label htmlFor="rate-limit" className="block text-sm font-medium text-foreground mb-2">
                   Rate Limit (requests/second)
