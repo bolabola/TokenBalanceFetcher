@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronUp, Search, Download, ArrowUpDown, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,6 @@ const formatAddress = (address: string): string => {
 export default function ResultsTable({ batchJobId }: ResultsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [sortField, setSortField] = useState<string>("address");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const { data: batchJob } = useQuery<BatchJob>({
     queryKey: ["/api/batch-jobs", batchJobId],
@@ -50,14 +48,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
     setExpandedRows(newExpanded);
   };
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
 
   const handleExport = (format: "csv" | "json") => {
     const url = `/api/batch-jobs/${batchJobId}/export/${format}`;
@@ -69,25 +59,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
     result.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortedResults = [...filteredResults].sort((a, b) => {
-    let aValue: any = a[sortField as keyof AddressResult];
-    let bValue: any = b[sortField as keyof AddressResult];
-
-    if (sortField === "totalValueUsd" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).totalValueUsd;
-      bValue = (b.data as SparkscanResponse).totalValueUsd;
-    } else if (sortField === "transactionCount" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).transactionCount;
-      bValue = (b.data as SparkscanResponse).transactionCount;
-    } else if (sortField === "tokenCount" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).tokenCount;
-      bValue = (b.data as SparkscanResponse).tokenCount;
-    }
-
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
+  const sortedResults = filteredResults;
 
   // Get selected tokens based on batch job settings
   const getSelectedTokens = () => {
@@ -165,42 +137,14 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted">
-                <TableHead>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => handleSort("address")}
-                    className="flex items-center space-x-1 hover:text-primary"
-                    data-testid="sort-address"
-                  >
-                    <span>Address</span>
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => handleSort("btcBalance")}
-                    className="flex items-center space-x-1 hover:text-primary"
-                    data-testid="sort-btc-balance"
-                  >
-                    <span>BTC Balance</span>
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
-                </TableHead>
+                <TableHead className="text-xs font-medium px-2 w-20">Address</TableHead>
+                <TableHead className="text-xs font-medium px-2 w-16 text-center">BTC</TableHead>
                 {getSelectedTokens().map((token) => (
-                  <TableHead key={token.ticker}>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => handleSort(token.ticker.toLowerCase())}
-                      className="flex items-center space-x-1 hover:text-primary"
-                      data-testid={`sort-${token.ticker.toLowerCase()}`}
-                    >
-                      <span>{token.ticker}</span>
-                      <ArrowUpDown className="h-3 w-3" />
-                    </Button>
+                  <TableHead key={token.ticker} className="text-xs font-medium px-2 w-12 text-center">
+                    {token.ticker}
                   </TableHead>
                 ))}
-                <TableHead>Actions</TableHead>
+                <TableHead className="text-xs font-medium px-2 w-8 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -213,7 +157,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <TableRow 
                       className="hover:bg-muted/50 transition-colors"
                     >
-                      <TableCell className="py-2 w-20">
+                      <TableCell className="py-1 px-2 w-20">
                         <div className="flex items-center space-x-1">
                           <div className={`w-2 h-2 rounded-full ${getStatusColor(result.status).replace('bg-', 'bg-').replace('text-', '')}`} />
                           <div className="min-w-0">
@@ -226,7 +170,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className="py-1 px-2 w-16 text-center">
                         {result.status === "processing" ? (
                           <div className="flex items-center space-x-1">
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -248,7 +192,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                       {getSelectedTokens().map((token) => {
                         const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
                         return (
-                          <TableCell key={token.ticker} className="py-2 text-center w-14">
+                          <TableCell key={token.ticker} className="py-1 px-2 text-center w-12">
                             {tokenBalance ? (
                               <div className="flex items-center">
                                 <span className="text-xs font-medium text-accent" data-testid={`text-${token.ticker.toLowerCase()}-balance-${result.id}`}>
@@ -261,7 +205,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </TableCell>
                         );
                       })}
-                      <TableCell className="py-2 text-center w-10">
+                      <TableCell className="py-1 px-2 text-center w-8">
                         {data && (
                           <Button
                             variant="ghost"
@@ -360,7 +304,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     </div>
                   </TableCell>
                   {getSelectedTokens().map((token) => (
-                    <TableCell key={token.ticker} className="py-2 text-center w-14">
+                    <TableCell key={token.ticker} className="py-1 px-2 text-center w-12">
                       <span className="text-xs font-semibold text-accent" data-testid={`text-summary-${token.ticker.toLowerCase()}-total`}>
                         {(() => {
                           const totalTokenBalance = results
