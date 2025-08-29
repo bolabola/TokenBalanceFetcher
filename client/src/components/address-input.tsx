@@ -189,7 +189,7 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
               <Textarea
                 id="addresses-input"
                 className="w-full h-32"
-                placeholder="sp1pgssyyy86kahk63mcllls9vxr4sttx2fa3m9jpjrywc9j5e2kx69dkwcveru6j&#10;sp2abc123def456...&#10;sp3xyz789uvw012..."
+                placeholder=""
                 value={addresses}
                 onChange={(e) => setAddresses(e.target.value)}
                 data-testid="textarea-addresses"
