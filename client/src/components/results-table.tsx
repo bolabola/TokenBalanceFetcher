@@ -157,8 +157,8 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <TableRow 
                       className="hover:bg-muted/50 transition-colors"
                     >
-                      <TableCell className="py-1 px-1">
-                        <div className="flex items-center space-x-1">
+                      <TableCell className="py-1 px-1 text-center">
+                        <div className="flex justify-center items-center space-x-1">
                           <div className={`w-2 h-2 rounded-full ${getStatusColor(result.status).replace('bg-', 'bg-').replace('text-', '')}`} />
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-foreground truncate" data-testid={`text-address-${result.id}`} title={result.address}>
@@ -172,7 +172,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                       </TableCell>
                       <TableCell className="py-1 px-1 text-center">
                         {result.status === "processing" ? (
-                          <div className="flex items-center space-x-1">
+                          <div className="flex justify-center items-center space-x-1">
                             <Loader2 className="h-3 w-3 animate-spin" />
                             <span className="text-xs text-muted-foreground">Loading...</span>
                           </div>
@@ -194,7 +194,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         return (
                           <TableCell key={token.ticker} className="py-1 px-1 text-center">
                             {tokenBalance ? (
-                              <div className="flex items-center">
+                              <div className="flex justify-center items-center">
                                 <span className="text-xs font-medium text-accent" data-testid={`text-${token.ticker.toLowerCase()}-balance-${result.id}`}>
                                   {formatBalance(tokenBalance.balance, tokenBalance.decimals)}
                                 </span>
