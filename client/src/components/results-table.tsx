@@ -22,7 +22,7 @@ const PREDEFINED_TOKENS = [
 // Utility function to format address display
 const formatAddress = (address: string): string => {
   if (address.length <= 10) return address;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
 
 export default function ResultsTable({ batchJobId }: ResultsTableProps) {
@@ -153,7 +153,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-w-full">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted">
@@ -239,15 +239,15 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <TableRow 
                       className="hover:bg-muted/50 transition-colors"
                     >
-                      <TableCell className="py-2">
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="py-2 w-28">
+                        <div className="flex items-center space-x-1">
                           <div className={`w-2 h-2 rounded-full ${getStatusColor(result.status).replace('bg-', 'bg-').replace('text-', '')}`} />
-                          <div>
-                            <p className="text-sm font-medium text-foreground" data-testid={`text-address-${result.id}`} title={result.address}>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate" data-testid={`text-address-${result.id}`} title={result.address}>
                               {formatAddress(result.address)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {result.processedAt ? `${new Date(result.processedAt).toLocaleTimeString()}` : "Pending"}
+                              {result.processedAt ? `${new Date(result.processedAt).toLocaleTimeString().slice(0,5)}` : "Pending"}
                             </p>
                           </div>
                         </div>
@@ -259,33 +259,33 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                             <span className="text-xs text-muted-foreground">Loading...</span>
                           </div>
                         ) : data ? (
-                          <div>
-                            <p className="text-xs font-medium text-foreground" data-testid={`text-btc-balance-${result.id}`}>
-                              {data.balance.btcHardBalanceSats} sats
+                          <div className="w-20">
+                            <p className="text-xs font-medium text-foreground truncate" data-testid={`text-btc-balance-${result.id}`}>
+                              {(data.balance.btcHardBalanceSats / 100000000).toFixed(3)}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              ${data.balance.btcValueUsdHard.toFixed(2)}
+                            <p className="text-xs text-muted-foreground truncate">
+                              ${data.balance.btcValueUsdHard.toFixed(0)}
                             </p>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2 text-xs text-foreground" data-testid={`text-token-count-${result.id}`}>
+                      <TableCell className="py-2 text-xs text-foreground text-center w-16" data-testid={`text-token-count-${result.id}`}>
                         {data?.tokenCount || "-"}
                       </TableCell>
-                      <TableCell className="py-2 text-xs text-foreground" data-testid={`text-transaction-count-${result.id}`}>
+                      <TableCell className="py-2 text-xs text-foreground text-center w-20" data-testid={`text-transaction-count-${result.id}`}>
                         {data?.transactionCount?.toLocaleString() || "-"}
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className="py-2 text-center w-20">
                         <span className="text-xs font-medium text-foreground" data-testid={`text-total-value-${result.id}`}>
-                          ${data?.totalValueUsd?.toFixed(2) || "0.00"}
+                          ${data?.totalValueUsd?.toFixed(0) || "0"}
                         </span>
                       </TableCell>
                       {PREDEFINED_TOKENS.map((token) => {
                         const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
                         return (
-                          <TableCell key={token.ticker} className="py-2">
+                          <TableCell key={token.ticker} className="py-2 text-center w-24">
                             {tokenBalance ? (
                               <div className="flex items-center">
                                 <span className="text-xs font-medium text-accent" data-testid={`text-${token.ticker.toLowerCase()}-balance-${result.id}`}>
@@ -298,7 +298,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </TableCell>
                         );
                       })}
-                      <TableCell className="py-2">
+                      <TableCell className="py-2 text-center w-16">
                         {data && (
                           <Button
                             variant="ghost"
@@ -306,7 +306,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                             onClick={() => toggleRowExpansion(result.id)}
                             data-testid={`button-expand-${result.id}`}
                           >
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                           </Button>
                         )}
                       </TableCell>
@@ -424,7 +424,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     </span>
                   </TableCell>
                   {PREDEFINED_TOKENS.map((token) => (
-                    <TableCell key={token.ticker} className="py-2">
+                    <TableCell key={token.ticker} className="py-2 text-center w-24">
                       <span className="text-xs font-semibold text-accent" data-testid={`text-summary-${token.ticker.toLowerCase()}-total`}>
                         {(() => {
                           const totalTokenBalance = results
