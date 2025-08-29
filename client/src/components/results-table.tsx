@@ -134,17 +134,17 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
         </div>
 
         <div className="overflow-x-auto max-w-full">
-          <Table>
+          <Table className="table-auto">
             <TableHeader>
               <TableRow className="bg-muted">
-                <TableHead className="text-xs font-medium px-2 w-20">Address</TableHead>
-                <TableHead className="text-xs font-medium px-2 w-16 text-center">BTC</TableHead>
+                <TableHead className="text-xs font-medium px-1">Address</TableHead>
+                <TableHead className="text-xs font-medium px-1 text-center">BTC</TableHead>
                 {getSelectedTokens().map((token) => (
-                  <TableHead key={token.ticker} className="text-xs font-medium px-2 w-12 text-center">
+                  <TableHead key={token.ticker} className="text-xs font-medium px-1 text-center">
                     {token.ticker}
                   </TableHead>
                 ))}
-                <TableHead className="text-xs font-medium px-2 w-8 text-center">Actions</TableHead>
+                <TableHead className="text-xs font-medium px-1 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -157,7 +157,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <TableRow 
                       className="hover:bg-muted/50 transition-colors"
                     >
-                      <TableCell className="py-1 px-2 w-20">
+                      <TableCell className="py-1 px-1">
                         <div className="flex items-center space-x-1">
                           <div className={`w-2 h-2 rounded-full ${getStatusColor(result.status).replace('bg-', 'bg-').replace('text-', '')}`} />
                           <div className="min-w-0">
@@ -170,7 +170,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="py-1 px-2 w-16 text-center">
+                      <TableCell className="py-1 px-1 text-center">
                         {result.status === "processing" ? (
                           <div className="flex items-center space-x-1">
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -192,7 +192,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                       {getSelectedTokens().map((token) => {
                         const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
                         return (
-                          <TableCell key={token.ticker} className="py-1 px-2 text-center w-12">
+                          <TableCell key={token.ticker} className="py-1 px-1 text-center">
                             {tokenBalance ? (
                               <div className="flex items-center">
                                 <span className="text-xs font-medium text-accent" data-testid={`text-${token.ticker.toLowerCase()}-balance-${result.id}`}>
@@ -205,7 +205,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </TableCell>
                         );
                       })}
-                      <TableCell className="py-1 px-2 text-center w-8">
+                      <TableCell className="py-1 px-1 text-center">
                         {data && (
                           <Button
                             variant="ghost"
@@ -304,7 +304,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     </div>
                   </TableCell>
                   {getSelectedTokens().map((token) => (
-                    <TableCell key={token.ticker} className="py-1 px-2 text-center w-12">
+                    <TableCell key={token.ticker} className="py-1 px-1 text-center">
                       <span className="text-xs font-semibold text-accent" data-testid={`text-summary-${token.ticker.toLowerCase()}-total`}>
                         {(() => {
                           const totalTokenBalance = results
