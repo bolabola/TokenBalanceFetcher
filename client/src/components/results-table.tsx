@@ -179,17 +179,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                <TableHead>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => handleSort("transactionCount")}
-                    className="flex items-center space-x-1 hover:text-primary"
-                    data-testid="sort-transactions"
-                  >
-                    <span>Transactions</span>
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
-                </TableHead>
                 {PREDEFINED_TOKENS.map((token) => (
                   <TableHead key={token.ticker}>
                     <Button 
@@ -249,9 +238,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2 text-xs text-foreground text-center w-14" data-testid={`text-transaction-count-${result.id}`}>
-                        {data?.transactionCount?.toLocaleString() || "-"}
-                      </TableCell>
                       {PREDEFINED_TOKENS.map((token) => {
                         const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
                         return (
@@ -285,7 +271,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     {/* Expandable Row Content */}
                     {isExpanded && data && (
                       <TableRow className="bg-muted/30">
-                        <TableCell colSpan={7} className="p-4">
+                        <TableCell colSpan={6} className="p-4">
                           <div className="space-y-4">
                             <h4 className="font-medium text-foreground">Token Details</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -365,14 +351,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         })()}
                       </p>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-sm font-semibold text-foreground" data-testid="text-summary-total-transactions">
-                    {(() => {
-                      const totalTx = results
-                        .filter(r => r.status === "success" && r.data)
-                        .reduce((sum, r) => sum + ((r.data as SparkscanResponse)?.transactionCount || 0), 0);
-                      return totalTx.toLocaleString();
-                    })()}
                   </TableCell>
                   {PREDEFINED_TOKENS.map((token) => (
                     <TableCell key={token.ticker} className="py-2 text-center w-14">
