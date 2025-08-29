@@ -59,6 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const batchJobId = req.params.id;
       const { addresses } = req.body as { addresses: string[] };
 
+      console.log(`Starting batch processing for job ${batchJobId} with ${addresses.length} addresses:`, addresses);
+
       const job = await storage.getBatchJob(batchJobId);
       if (!job) {
         return res.status(404).json({ message: "Batch job not found" });
@@ -86,6 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Batch processing started" });
     } catch (error) {
+      console.error("Error starting batch processing:", error);
       res.status(500).json({ message: "Failed to start batch processing" });
     }
   });
@@ -179,6 +182,8 @@ async function processAddressesBatch(
   rateLimit: number,
   targetTokenAddress?: string | null
 ) {
+  console.log(`processAddressesBatch started for job ${batchJobId} with ${addresses.length} addresses`);
+  
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const requestDelay = Math.ceil(1000 / rateLimit); // Convert rate limit to delay between requests
 
@@ -187,6 +192,7 @@ async function processAddressesBatch(
   let failedCount = 0;
 
   for (const address of addresses) {
+    console.log(`Processing address: ${address}`);
     try {
       // Find the address result entry
       const results = await storage.getAddressResultsByBatchId(batchJobId);
@@ -198,22 +204,25 @@ async function processAddressesBatch(
 
         try {
           // Make API call to Sparkscan
-          const response = await fetch(
-            `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`,
-            {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
-              }
+          const apiUrl = `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`;
+          console.log(`Making API call to: ${apiUrl}`);
+          
+          const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
             }
-          );
+          });
+
+          console.log(`API response status: ${response.status}`);
 
           if (!response.ok) {
             throw new Error(`API request failed: ${response.status} ${response.statusText}`);
           }
 
           const data: SparkscanResponse = await response.json();
+          console.log(`API response data for ${address}:`, data);
 
           // Update result with success
           await storage.updateAddressResult(resultEntry.id, {
