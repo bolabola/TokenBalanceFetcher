@@ -27,7 +27,7 @@ const PREDEFINED_TOKENS = [
 export default function AddressInput({ onBatchCreated, onBatchCleared }: AddressInputProps) {
   const [activeTab, setActiveTab] = useState<"manual" | "upload">("manual");
   const [addresses, setAddresses] = useState("");
-  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
+  const [selectedTokens, setSelectedTokens] = useState<string[]>(["btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553"]);
   const [customTokenAddress, setCustomTokenAddress] = useState("");
   const [showCustomToken, setShowCustomToken] = useState(false);
   const [rateLimit, setRateLimit] = useState("5");
@@ -117,6 +117,11 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
   };
 
   const handleTokenToggle = (tokenAddress: string) => {
+    // FSPKS is always selected, cannot be deselected
+    if (tokenAddress === "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553") {
+      return;
+    }
+    
     setSelectedTokens(prev => 
       prev.includes(tokenAddress) 
         ? prev.filter(addr => addr !== tokenAddress)
@@ -138,7 +143,7 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
 
   const handleClear = () => {
     setAddresses("");
-    setSelectedTokens([]);
+    setSelectedTokens(["btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553"]); // Keep FSPKS selected
     setCustomTokenAddress("");
     setShowCustomToken(false);
     setFile(null);
@@ -208,15 +213,21 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
                   <div className="text-xs font-medium text-muted-foreground mb-2">Popular Tokens</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {PREDEFINED_TOKENS.map((token) => (
-                      <div key={token.address} className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div key={token.address} className={`flex items-center space-x-2 p-3 border border-border rounded-lg transition-colors ${
+                        token.ticker === 'FSPKS' ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/50'
+                      }`}>
                         <Checkbox
                           id={token.address}
                           checked={selectedTokens.includes(token.address)}
                           onCheckedChange={() => handleTokenToggle(token.address)}
+                          disabled={token.ticker === 'FSPKS'}
                           data-testid={`checkbox-token-${token.ticker}`}
                         />
                         <Label htmlFor={token.address} className="flex-1 cursor-pointer">
-                          <div className="font-medium text-foreground">{token.ticker}</div>
+                          <div className="font-medium text-foreground">
+                            {token.ticker}
+                            {token.ticker === 'FSPKS' && <span className="ml-2 text-xs text-primary">(Required)</span>}
+                          </div>
                           <div className="text-xs text-muted-foreground">{token.name}</div>
                         </Label>
                       </div>
