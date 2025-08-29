@@ -185,8 +185,8 @@ async function processAddressesBatch(
   console.log(`processAddressesBatch started for job ${batchJobId} with ${addresses.length} addresses`);
   
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  // Use a more conservative rate limit - minimum 2 seconds between requests
-  const requestDelay = Math.max(2000, Math.ceil(1000 / rateLimit));
+  // Use a very conservative rate limit - minimum 10 seconds between requests
+  const requestDelay = Math.max(10000, Math.ceil(1000 / rateLimit));
 
   let processedCount = 0;
   let successCount = 0;
@@ -224,8 +224,8 @@ async function processAddressesBatch(
             console.log(`API response status: ${response.status} (attempt ${retryCount + 1})`);
             
             if (response.status === 429) {
-              // Rate limited, wait longer and retry
-              const retryDelay = 5000 * (retryCount + 1); // Exponential backoff
+              // Rate limited, wait much longer and retry
+              const retryDelay = 30000 * (retryCount + 1); // Much longer exponential backoff
               console.log(`Rate limited, waiting ${retryDelay}ms before retry...`);
               if (retryCount < maxRetries) {
                 await delay(retryDelay);

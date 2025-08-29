@@ -10,10 +10,51 @@ interface ProgressSectionProps {
 }
 
 export default function ProgressSection({ batchJobId }: ProgressSectionProps) {
+  const logger = (window as any).sparkScanLogger;
+
   const { data: batchJob } = useQuery<BatchJob>({
     queryKey: ["/api/batch-jobs", batchJobId],
-    refetchInterval: 2000,
+    refetchInterval: 3000,
     enabled: true,
+    onSuccess: (data) => {
+      if (data) {
+        const prevStatus = (window as any).lastBatchStatus;
+        const prevProcessed = (window as any).lastProcessedCount || 0;
+        
+        if (prevStatus !== data.status) {
+          (window as any).lastBatchStatus = data.status;
+          
+          switch(data.status) {
+            case "processing":
+              logger?.info(`Batch processing started`, `Processing ${data.totalAddresses} addresses with ${data.rateLimit || 5} req/sec rate limit`);
+              break;
+            case "completed":
+              logger?.success(`Batch processing completed!`, `Successfully processed ${data.processedAddresses} addresses`);
+              break;
+            case "failed":
+              logger?.error(`Batch processing failed`, `Only ${data.processedAddresses}/${data.totalAddresses} addresses completed`);
+              break;
+          }
+        }
+        
+        // Log progress updates
+        if (data.status === "processing" && data.processedAddresses > prevProcessed) {
+          const newlyProcessed = data.processedAddresses - prevProcessed;
+          (window as any).lastProcessedCount = data.processedAddresses;
+          logger?.info(`API requests completed`, `${newlyProcessed} address(es) processed, ${data.totalAddresses - data.processedAddresses} remaining`);
+        }
+        
+        // Log rate limiting issues
+        if (data.status === "processing" && data.processedAddresses === prevProcessed && prevProcessed > 0) {
+          const now = Date.now();
+          const lastRateLimitLog = (window as any).lastRateLimitLog || 0;
+          if (now - lastRateLimitLog > 30000) { // Log every 30 seconds
+            (window as any).lastRateLimitLog = now;
+            logger?.warning(`Processing delayed`, `API rate limiting detected, waiting for requests to complete`);
+          }
+        }
+      }
+    }
   });
 
   if (!batchJob) {

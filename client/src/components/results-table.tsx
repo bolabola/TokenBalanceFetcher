@@ -219,7 +219,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                   <React.Fragment key={result.id}>
                     <TableRow 
                       className="hover:bg-muted/50 transition-colors"
-                      data-testid={`row-address-${result.id}`}
                     >
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -292,7 +291,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
 
                     {/* Expandable Row Content */}
                     {isExpanded && data && (
-                      <TableRow className="bg-muted/30" data-testid={`expanded-row-${result.id}`}>
+                      <TableRow className="bg-muted/30">
                         <TableCell colSpan={7} className="p-6">
                           <div className="space-y-4">
                             <h4 className="font-medium text-foreground">Token Details</h4>
