@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/public/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server/index.ts"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/public/$1"
+    }
+  ],
+  "outputDirectory": "dist/public",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "functions": {
+    "server/index.ts": {
+      "includeFiles": "dist/public/**"
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
