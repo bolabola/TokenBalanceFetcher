@@ -185,8 +185,8 @@ async function processAddressesBatch(
   console.log(`processAddressesBatch started for job ${batchJobId} with ${addresses.length} addresses`);
   
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  // Use a very conservative rate limit - minimum 10 seconds between requests
-  const requestDelay = Math.max(10000, Math.ceil(1000 / rateLimit));
+  // Use user-defined rate limit
+  const requestDelay = Math.ceil(1000 / rateLimit);
 
   let processedCount = 0;
   let successCount = 0;
@@ -210,35 +210,66 @@ async function processAddressesBatch(
           
           let retryCount = 0;
           const maxRetries = 3;
-          let response: Response;
+          let response: Response | null = null;
+          let lastError: string | null = null;
           
           while (retryCount <= maxRetries) {
-            response = await fetch(apiUrl, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
+            try {
+              response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
+                }
+              });
+              
+              console.log(`API response status: ${response.status} (attempt ${retryCount + 1}) for ${address}`);
+              
+              if (response.status === 429) {
+                // Rate limited, wait and retry
+                const retryDelay = Math.max(5000, requestDelay) * (retryCount + 1);
+                lastError = `Rate limited (429 error) - API returned Too Many Requests`;
+                console.log(`RATE LIMITED (429): Address ${address}, waiting ${retryDelay}ms before retry... (attempt ${retryCount + 1}/${maxRetries + 1})`);
+                
+                if (retryCount < maxRetries) {
+                  await delay(retryDelay);
+                  retryCount++;
+                  continue;
+                } else {
+                  console.log(`RATE LIMIT EXCEEDED: Address ${address} failed after ${maxRetries + 1} attempts - all returned 429`);
+                  lastError = `Rate limited: All ${maxRetries + 1} attempts returned 429 (Too Many Requests)`;
+                  break;
+                }
               }
-            });
-            
-            console.log(`API response status: ${response.status} (attempt ${retryCount + 1})`);
-            
-            if (response.status === 429) {
-              // Rate limited, wait much longer and retry
-              const retryDelay = 30000 * (retryCount + 1); // Much longer exponential backoff
-              console.log(`Rate limited, waiting ${retryDelay}ms before retry...`);
+              
+              if (!response.ok) {
+                lastError = `HTTP ${response.status}: ${response.statusText}`;
+                console.log(`API ERROR: Address ${address} returned ${response.status} ${response.statusText}`);
+                break;
+              }
+              
+              // Success, break out of retry loop
+              lastError = null;
+              break;
+              
+            } catch (fetchError) {
+              lastError = `Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`;
+              console.log(`NETWORK ERROR: Address ${address} - ${lastError}`);
+              
               if (retryCount < maxRetries) {
+                const retryDelay = Math.max(2000, requestDelay) * (retryCount + 1);
+                console.log(`Network error for ${address}, waiting ${retryDelay}ms before retry...`);
                 await delay(retryDelay);
                 retryCount++;
                 continue;
               }
+              break;
             }
-            
-            if (!response.ok) {
-              throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-            }
-            
-            break;
+          }
+          
+          // Check if we have a valid response
+          if (!response || !response.ok) {
+            throw new Error(lastError || `API request failed after ${maxRetries + 1} attempts`);
           }
 
           const data: SparkscanResponse = await response.json();

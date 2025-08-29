@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { StopCircle, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,46 +17,48 @@ export default function ProgressSection({ batchJobId }: ProgressSectionProps) {
     queryKey: ["/api/batch-jobs", batchJobId],
     refetchInterval: 3000,
     enabled: true,
-    onSuccess: (data) => {
-      if (data) {
-        const prevStatus = (window as any).lastBatchStatus;
-        const prevProcessed = (window as any).lastProcessedCount || 0;
+  });
+
+  // Monitor batch job changes
+  useEffect(() => {
+    if (batchJob) {
+      const prevStatus = (window as any).lastBatchStatus;
+      const prevProcessed = (window as any).lastProcessedCount || 0;
+      
+      if (prevStatus !== batchJob.status) {
+        (window as any).lastBatchStatus = batchJob.status;
         
-        if (prevStatus !== data.status) {
-          (window as any).lastBatchStatus = data.status;
-          
-          switch(data.status) {
-            case "processing":
-              logger?.info(`Batch processing started`, `Processing ${data.totalAddresses} addresses with ${data.rateLimit || 5} req/sec rate limit`);
-              break;
-            case "completed":
-              logger?.success(`Batch processing completed!`, `Successfully processed ${data.processedAddresses} addresses`);
-              break;
-            case "failed":
-              logger?.error(`Batch processing failed`, `Only ${data.processedAddresses}/${data.totalAddresses} addresses completed`);
-              break;
-          }
+        switch(batchJob.status) {
+          case "processing":
+            logger?.info(`Batch processing started`, `Processing ${batchJob.totalAddresses} addresses with ${batchJob.rateLimit || 5} req/sec rate limit`);
+            break;
+          case "completed":
+            logger?.success(`Batch processing completed!`, `Successfully processed ${batchJob.processedAddresses} addresses`);
+            break;
+          case "failed":
+            logger?.error(`Batch processing failed`, `Only ${batchJob.processedAddresses}/${batchJob.totalAddresses} addresses completed`);
+            break;
         }
-        
-        // Log progress updates
-        if (data.status === "processing" && data.processedAddresses > prevProcessed) {
-          const newlyProcessed = data.processedAddresses - prevProcessed;
-          (window as any).lastProcessedCount = data.processedAddresses;
-          logger?.info(`API requests completed`, `${newlyProcessed} address(es) processed, ${data.totalAddresses - data.processedAddresses} remaining`);
-        }
-        
-        // Log rate limiting issues
-        if (data.status === "processing" && data.processedAddresses === prevProcessed && prevProcessed > 0) {
-          const now = Date.now();
-          const lastRateLimitLog = (window as any).lastRateLimitLog || 0;
-          if (now - lastRateLimitLog > 30000) { // Log every 30 seconds
-            (window as any).lastRateLimitLog = now;
-            logger?.warning(`Processing delayed`, `API rate limiting detected, waiting for requests to complete`);
-          }
+      }
+      
+      // Log progress updates
+      if (batchJob.status === "processing" && batchJob.processedAddresses > prevProcessed) {
+        const newlyProcessed = batchJob.processedAddresses - prevProcessed;
+        (window as any).lastProcessedCount = batchJob.processedAddresses;
+        logger?.info(`API requests completed`, `${newlyProcessed} address(es) processed, ${batchJob.totalAddresses - batchJob.processedAddresses} remaining`);
+      }
+      
+      // Log rate limiting issues
+      if (batchJob.status === "processing" && batchJob.processedAddresses === prevProcessed && prevProcessed > 0) {
+        const now = Date.now();
+        const lastRateLimitLog = (window as any).lastRateLimitLog || 0;
+        if (now - lastRateLimitLog > 15000) { // Log every 15 seconds
+          (window as any).lastRateLimitLog = now;
+          logger?.warning(`Processing delayed`, `API rate limiting (429 errors) detected, retrying requests`);
         }
       }
     }
-  });
+  }, [batchJob, logger]);
 
   if (!batchJob) {
     return null;
