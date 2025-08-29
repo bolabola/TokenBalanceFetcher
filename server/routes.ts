@@ -205,7 +205,7 @@ async function processAddressesBatch(
 
         try {
           // Make API call to Hiro Stacks API with retry logic
-          const apiUrl = `https://api.sparkscan.co/address/${address}`;
+          const apiUrl = `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`;
           console.log(`Making API call to Sparkscan API: ${apiUrl}`);
           
           let retryCount = 0;
@@ -219,7 +219,9 @@ async function processAddressesBatch(
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json',
-                  'User-Agent': 'Stacks-Batch-Analyzer/1.0'
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                  'Referer': 'https://www.sparkscan.io/',
+                  'Origin': 'https://www.sparkscan.io'
                 }
               });
               
