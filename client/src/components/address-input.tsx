@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface AddressInputProps {
   onBatchCreated: (batchJobId: string) => void;
+  onBatchCleared?: () => void;
 }
 
 // Predefined token options
@@ -23,7 +24,7 @@ const PREDEFINED_TOKENS = [
   { ticker: "UTXO", address: "btkn1pzvck7xzt96vj4h9agnyu493t7a9jdc4v3j2z3n3fs4cwlcq9yps2zgm4z", name: "UTXO" },
 ];
 
-export default function AddressInput({ onBatchCreated }: AddressInputProps) {
+export default function AddressInput({ onBatchCreated, onBatchCleared }: AddressInputProps) {
   const [activeTab, setActiveTab] = useState<"manual" | "upload">("manual");
   const [addresses, setAddresses] = useState("");
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
@@ -145,6 +146,8 @@ export default function AddressInput({ onBatchCreated }: AddressInputProps) {
     if (fileInput) {
       fileInput.value = "";
     }
+    // Clear the current batch analysis
+    onBatchCleared?.();
   };
 
   const addressCount = parseAddresses(addresses).length;

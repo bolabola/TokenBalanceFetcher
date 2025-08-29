@@ -21,7 +21,7 @@ export default function ProgressSection({ batchJobId }: ProgressSectionProps) {
   }
 
   const progressPercentage = batchJob.totalAddresses > 0 
-    ? (batchJob.processedAddresses / batchJob.totalAddresses) * 100 
+    ? Math.round((batchJob.processedAddresses / batchJob.totalAddresses) * 100)
     : 0;
 
   return (
