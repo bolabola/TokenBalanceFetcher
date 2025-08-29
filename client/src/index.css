@@ -122,6 +122,14 @@
   
   [data-compact="true"] th {
     width: auto;
-    min-width: fit-content;
+    min-width: 60px;
+  }
+  
+  [data-compact="true"] th:first-child {
+    min-width: 120px;
+  }
+  
+  [data-compact="true"] th:last-child {
+    min-width: 80px;
   }
 }
