@@ -41,9 +41,27 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
     },
   });
 
-  const processBatchMutation = useMutation({
+  const initializeBatchMutation = useMutation({
     mutationFn: async ({ batchJobId, addresses }: { batchJobId: string; addresses: string[] }) => {
-      const response = await apiRequest("POST", `/api/batch-jobs/${batchJobId}/process`, { addresses });
+      const response = await apiRequest("POST", `/api/batch-jobs/${batchJobId}/initialize`, { addresses });
+      return response.json();
+    },
+  });
+
+  const submitResultMutation = useMutation({
+    mutationFn: async ({ batchJobId, address, status, data, errorMessage }: { 
+      batchJobId: string; 
+      address: string; 
+      status: "success" | "failed"; 
+      data?: any; 
+      errorMessage?: string 
+    }) => {
+      const response = await apiRequest("POST", `/api/batch-jobs/${batchJobId}/submit-result`, {
+        address,
+        status,
+        data,
+        errorMessage,
+      });
       return response.json();
     },
   });
@@ -69,6 +87,103 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
       .split('\n')
       .map(addr => addr.trim())
       .filter(addr => addr && addr.startsWith('sp'));
+  };
+
+  // Helper function to call Sparkscan API directly from frontend
+  const callSparkscanAPI = async (address: string, retries = 3): Promise<{ success: boolean; data?: any; error?: string }> => {
+    const apiUrl = `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://www.sparkscan.io/',
+            'Origin': 'https://www.sparkscan.io'
+          }
+        });
+
+        if (response.status === 429) {
+          // Rate limited - wait and retry
+          if (attempt < retries) {
+            const delay = Math.min(5000 * attempt, 15000);  // Exponential backoff up to 15 seconds
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          } else {
+            return { success: false, error: "Rate limited after multiple retries" };
+          }
+        }
+
+        if (!response.ok) {
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+            continue;
+          }
+          return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+
+        const data = await response.json();
+        return { success: true, data };
+      } catch (error) {
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          continue;
+        }
+        return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      }
+    }
+    return { success: false, error: 'All retry attempts failed' };
+  };
+
+  // Function to process addresses with frontend API calls
+  const processAddressesDirectly = async (batchJobId: string, addresses: string[], rateLimitPerSecond: number) => {
+    const logger = (window as any).sparkScanLogger;
+    const delay = Math.ceil(1000 / rateLimitPerSecond); // Convert to milliseconds between requests
+
+    for (let i = 0; i < addresses.length; i++) {
+      const address = addresses[i];
+      
+      logger?.info(`Processing address ${i + 1}/${addresses.length}`, address);
+      
+      try {
+        const result = await callSparkscanAPI(address);
+        
+        if (result.success) {
+          await submitResultMutation.mutateAsync({
+            batchJobId,
+            address,
+            status: "success",
+            data: result.data,
+          });
+          logger?.success(`✓ Address ${i + 1} completed`, address);
+        } else {
+          await submitResultMutation.mutateAsync({
+            batchJobId,
+            address,
+            status: "failed",
+            errorMessage: result.error,
+          });
+          logger?.error(`✗ Address ${i + 1} failed`, result.error || "Unknown error");
+        }
+      } catch (error) {
+        logger?.error(`✗ Address ${i + 1} error`, error instanceof Error ? error.message : "Unknown error");
+        await submitResultMutation.mutateAsync({
+          batchJobId,
+          address,
+          status: "failed",
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+
+      // Rate limiting delay (except for the last address)
+      if (i < addresses.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    logger?.success("All addresses processed!", `Completed ${addresses.length} addresses`);
   };
 
   const handleStartAnalysis = async () => {
@@ -103,20 +218,25 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
       
       logger?.success(`Batch job created: ${batchJob.id}`, `Processing ${addressList.length} addresses`);
 
-      // Start processing
-      logger?.info("Starting address processing...", "API calls will begin shortly");
-      await processBatchMutation.mutateAsync({
+      // Initialize batch processing (create entries in database)
+      logger?.info("Initializing batch processing...", "Setting up address entries");
+      await initializeBatchMutation.mutateAsync({
         batchJobId: batchJob.id,
         addresses: addressList,
       });
 
       onBatchCreated(batchJob.id);
       
-      logger?.success("Batch processing initiated", "Monitor progress below");
+      logger?.info("Starting frontend API calls...", "Using your local IP to avoid rate limits");
       toast({
         title: "Batch processing started",
-        description: `Processing ${addressList.length} addresses...`,
+        description: `Processing ${addressList.length} addresses using your local IP...`,
       });
+
+      // Start processing addresses directly in frontend (non-blocking)
+      setTimeout(() => {
+        processAddressesDirectly(batchJob.id, addressList, parseInt(rateLimit));
+      }, 100);
     } catch (error) {
       logger?.error("Failed to start analysis", error instanceof Error ? error.message : "Unknown error");
       toast({
@@ -390,11 +510,11 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
           <div className="flex items-center space-x-4">
             <Button
               onClick={handleStartAnalysis}
-              disabled={createBatchMutation.isPending || processBatchMutation.isPending || addressCount === 0}
+              disabled={createBatchMutation.isPending || initializeBatchMutation.isPending || addressCount === 0}
               data-testid="button-start-analysis"
             >
               <Play className="mr-2 h-4 w-4" />
-              {createBatchMutation.isPending || processBatchMutation.isPending ? "Starting..." : "Start Analysis"}
+              {createBatchMutation.isPending || initializeBatchMutation.isPending ? "Starting..." : "Start Analysis"}
             </Button>
             <Button variant="outline" onClick={handleClear} data-testid="button-clear">
               <Eraser className="mr-2 h-4 w-4" />
