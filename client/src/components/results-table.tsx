@@ -12,6 +12,13 @@ interface ResultsTableProps {
   batchJobId: string;
 }
 
+// Predefined token options  
+const PREDEFINED_TOKENS = [
+  { ticker: "FSPKS", address: "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553", name: "FlashSparks" },
+  { ticker: "SNOW", address: "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws", name: "Snowflake" },
+  { ticker: "UTXO", address: "btkn1pzvck7xzt96vj4h9agnyu493t7a9jdc4v3j2z3n3fs4cwlcq9yps2zgm4z", name: "UTXO" },
+];
+
 // Utility function to format address display
 const formatAddress = (address: string): string => {
   if (address.length <= 10) return address;
@@ -205,7 +212,19 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                <TableHead>Target Token</TableHead>
+                {PREDEFINED_TOKENS.map((token) => (
+                  <TableHead key={token.ticker}>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => handleSort(token.ticker.toLowerCase())}
+                      className="flex items-center space-x-1 hover:text-primary"
+                      data-testid={`sort-${token.ticker.toLowerCase()}`}
+                    >
+                      <span>{token.ticker}</span>
+                      <ArrowUpDown className="h-3 w-3" />
+                    </Button>
+                  </TableHead>
+                ))}
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -263,18 +282,22 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           ${data?.totalValueUsd?.toFixed(2) || "0.00"}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {targetToken ? (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-accent" data-testid={`text-target-token-balance-${result.id}`}>
-                              {formatBalance(targetToken.balance, targetToken.decimals)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">{targetToken.ticker}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      {PREDEFINED_TOKENS.map((token) => {
+                        const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
+                        return (
+                          <TableCell key={token.ticker}>
+                            {tokenBalance ? (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-sm font-medium text-accent" data-testid={`text-${token.ticker.toLowerCase()}-balance-${result.id}`}>
+                                  {formatBalance(tokenBalance.balance, tokenBalance.decimals)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        );
+                      })}
                       <TableCell>
                         {data && (
                           <Button
@@ -292,7 +315,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     {/* Expandable Row Content */}
                     {isExpanded && data && (
                       <TableRow className="bg-muted/30">
-                        <TableCell colSpan={7} className="p-6">
+                        <TableCell colSpan={9} className="p-6">
                           <div className="space-y-4">
                             <h4 className="font-medium text-foreground">Token Details</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -400,34 +423,22 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                       })()}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-semibold text-accent" data-testid="text-summary-target-token-total">
+                  {PREDEFINED_TOKENS.map((token) => (
+                    <TableCell key={token.ticker}>
+                      <span className="text-sm font-semibold text-accent" data-testid={`text-summary-${token.ticker.toLowerCase()}-total`}>
                         {(() => {
-                          const totalTargetBalance = results
-                            .filter(r => r.status === "success" && r.data && batchJob?.targetTokenAddress)
+                          const totalTokenBalance = results
+                            .filter(r => r.status === "success" && r.data)
                             .reduce((sum, r) => {
                               const data = r.data as SparkscanResponse;
-                              const targetToken = data.tokens?.find(token => token.tokenAddress === batchJob?.targetTokenAddress);
-                              return sum + (targetToken ? targetToken.balance / Math.pow(10, targetToken.decimals) : 0);
+                              const foundToken = data.tokens?.find(t => t.tokenAddress === token.address);
+                              return sum + (foundToken ? foundToken.balance / Math.pow(10, foundToken.decimals) : 0);
                             }, 0);
-                          return totalTargetBalance.toLocaleString();
+                          return totalTokenBalance.toLocaleString();
                         })()}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {(() => {
-                          const firstTargetToken = results
-                            .filter(r => r.status === "success" && r.data && batchJob?.targetTokenAddress)
-                            .map(r => {
-                              const data = r.data as SparkscanResponse;
-                              return data.tokens?.find(token => token.tokenAddress === batchJob?.targetTokenAddress);
-                            })
-                            .find(token => token);
-                          return firstTargetToken?.ticker || '';
-                        })()}
-                      </span>
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  ))}
                   <TableCell>
                     <span className="text-xs text-muted-foreground" data-testid="text-summary-count">
                       {results.filter(r => r.status === "success").length} success / {results.length} total
