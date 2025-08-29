@@ -89,11 +89,19 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
     return 0;
   });
 
-  const getTargetTokenBalance = (result: AddressResult): { balance: number; ticker: string; decimals: number } | null => {
-    if (!result.data || !batchJob?.targetTokenAddress) return null;
+  // Get selected tokens based on batch job settings
+  const getSelectedTokens = () => {
+    if (!batchJob?.targetTokenAddresses) return [];
+    return PREDEFINED_TOKENS.filter(token => 
+      batchJob.targetTokenAddresses?.includes(token.address)
+    );
+  };
+
+  const getTargetTokenBalance = (result: AddressResult, tokenAddress: string): { balance: number; ticker: string; decimals: number } | null => {
+    if (!result.data) return null;
     
     const data = result.data as SparkscanResponse;
-    const targetToken = data.tokens?.find(token => token.tokenAddress === batchJob.targetTokenAddress);
+    const targetToken = data.tokens?.find(token => token.tokenAddress === tokenAddress);
     
     return targetToken ? { balance: targetToken.balance, ticker: targetToken.ticker, decimals: targetToken.decimals } : null;
   };
@@ -179,7 +187,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                {PREDEFINED_TOKENS.map((token) => (
+                {getSelectedTokens().map((token) => (
                   <TableHead key={token.ticker}>
                     <Button 
                       variant="ghost" 
@@ -198,7 +206,6 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
             <TableBody>
               {sortedResults.map((result) => {
                 const data = result.data as SparkscanResponse | null;
-                const targetToken = getTargetTokenBalance(result);
                 const isExpanded = expandedRows.has(result.id);
                 
                 return (
@@ -238,7 +245,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      {PREDEFINED_TOKENS.map((token) => {
+                      {getSelectedTokens().map((token) => {
                         const tokenBalance = data?.tokens?.find(t => t.tokenAddress === token.address);
                         return (
                           <TableCell key={token.ticker} className="py-2 text-center w-14">
@@ -271,7 +278,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                     {/* Expandable Row Content */}
                     {isExpanded && data && (
                       <TableRow className="bg-muted/30">
-                        <TableCell colSpan={6} className="p-4">
+                        <TableCell colSpan={3 + getSelectedTokens().length} className="p-4">
                           <div className="space-y-4">
                             <h4 className="font-medium text-foreground">Token Details</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,7 +359,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                       </p>
                     </div>
                   </TableCell>
-                  {PREDEFINED_TOKENS.map((token) => (
+                  {getSelectedTokens().map((token) => (
                     <TableCell key={token.ticker} className="py-2 text-center w-14">
                       <span className="text-xs font-semibold text-accent" data-testid={`text-summary-${token.ticker.toLowerCase()}-total`}>
                         {(() => {

@@ -35,7 +35,7 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
   const { toast } = useToast();
 
   const createBatchMutation = useMutation({
-    mutationFn: async (data: { name: string; targetTokenAddress?: string; rateLimit: number; totalAddresses: number }) => {
+    mutationFn: async (data: { name: string; targetTokenAddresses?: string[]; rateLimit: number; totalAddresses: number }) => {
       const response = await apiRequest("POST", "/api/batch-jobs", data);
       return response.json();
     },
@@ -204,14 +204,16 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
     }
 
     try {
-      // Create batch job with the first selected token (for now, keeping single token compatibility)
-      const targetTokenAddress = selectedTokens.length > 0 ? selectedTokens[0] : 
-                                (customTokenAddress ? customTokenAddress : undefined);
+      // Create batch job with all selected tokens
+      const targetTokenAddresses = [...selectedTokens];
+      if (customTokenAddress && !targetTokenAddresses.includes(customTokenAddress)) {
+        targetTokenAddresses.push(customTokenAddress);
+      }
       
       logger?.info("Creating batch job...", `Rate limit: ${rateLimit} req/sec`);
       const batchJob = await createBatchMutation.mutateAsync({
         name: `Batch ${new Date().toLocaleString()}`,
-        targetTokenAddress: targetTokenAddress,
+        targetTokenAddresses: targetTokenAddresses,
         rateLimit: parseInt(rateLimit),
         totalAddresses: addressList.length,
       });

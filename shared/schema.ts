@@ -6,7 +6,7 @@ import { z } from "zod";
 export const batchJobs = pgTable("batch_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  targetTokenAddress: text("target_token_address"),
+  targetTokenAddresses: text("target_token_addresses").array(),
   rateLimit: integer("rate_limit").notNull().default(5),
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
   totalAddresses: integer("total_addresses").notNull(),

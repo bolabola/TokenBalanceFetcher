@@ -158,8 +158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const result of results) {
         if (result.status === 'success' && result.data) {
           const data = result.data as SparkscanResponse;
-          const targetToken = job.targetTokenAddress 
-            ? data.tokens?.find((t) => t.tokenAddress === job.targetTokenAddress)
+          const targetToken = job.targetTokenAddresses && job.targetTokenAddresses.length > 0
+            ? data.tokens?.find((t) => job.targetTokenAddresses?.includes(t.tokenAddress))
             : null;
           
           csvRows.push([
