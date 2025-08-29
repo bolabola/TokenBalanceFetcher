@@ -138,6 +138,10 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
   };
 
   const handleRemoveToken = (tokenAddress: string) => {
+    // FSPKS cannot be removed
+    if (tokenAddress === "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553") {
+      return;
+    }
     setSelectedTokens(prev => prev.filter(addr => addr !== tokenAddress));
   };
 
@@ -292,19 +296,26 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
                         const predefinedToken = PREDEFINED_TOKENS.find(t => t.address === tokenAddress);
                         const displayName = predefinedToken ? predefinedToken.ticker : tokenAddress.slice(0, 8) + '...';
                         
+                        const isFSPKS = tokenAddress === "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553";
+                        
                         return (
-                          <Badge key={tokenAddress} variant="secondary" className="flex items-center space-x-1">
-                            <span data-testid={`badge-selected-token-${displayName}`}>{displayName}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                              onClick={() => handleRemoveToken(tokenAddress)}
-                              data-testid={`button-remove-token-${displayName}`}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                          <Badge key={tokenAddress} variant={isFSPKS ? "default" : "secondary"} className="flex items-center space-x-1">
+                            <span data-testid={`badge-selected-token-${displayName}`}>
+                              {displayName}
+                              {isFSPKS && <span className="ml-1 text-xs">(Required)</span>}
+                            </span>
+                            {!isFSPKS && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => handleRemoveToken(tokenAddress)}
+                                data-testid={`button-remove-token-${displayName}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </Badge>
                         );
                       })}
