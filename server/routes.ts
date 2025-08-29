@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBatchJobSchema, insertAddressResultSchema, type SparkscanResponse } from "@shared/schema";
+import { insertBatchJobSchema, insertAddressResultSchema, type HiroBalanceResponse } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 
@@ -103,22 +103,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Batch job not found" });
       }
 
-      const csvRows = ['Address,BTC Balance (sats),Token Count,Transactions,Total Value USD,Target Token Balance,Status'];
+      const csvRows = ['Address,STX Balance,Token Count,Transactions,Total Value USD (est.),Target Token Balance,Status'];
       
       for (const result of results) {
         if (result.status === 'success' && result.data) {
-          const data = result.data as SparkscanResponse;
-          const targetToken = job.targetTokenAddress 
-            ? data.tokens.find(t => t.tokenAddress === job.targetTokenAddress)
-            : null;
+          const data = result.data as HiroBalanceResponse;
+          const stxBalance = (parseFloat(data.stx.balance) / 1000000).toFixed(6);
+          const tokenCount = Object.keys(data.fungible_tokens).length;
+          const targetTokenBalance = job.targetTokenAddress && data.fungible_tokens[job.targetTokenAddress]
+            ? data.fungible_tokens[job.targetTokenAddress].balance
+            : '0';
+          const estimatedValue = (parseFloat(data.stx.balance) / 1000000 * 0.5).toFixed(2);
           
           csvRows.push([
             result.address,
-            data.balance.btcHardBalanceSats.toString(),
-            data.tokenCount.toString(),
-            data.transactionCount.toString(),
-            data.totalValueUsd.toString(),
-            targetToken ? targetToken.balance.toString() : '0',
+            stxBalance,
+            tokenCount.toString(),
+            'N/A',
+            estimatedValue,
+            targetTokenBalance,
             result.status
           ].join(','));
         } else {
@@ -126,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             result.address,
             '0',
             '0',
-            '0',
+            'N/A',
             '0',
             '0',
             result.status
@@ -204,9 +207,9 @@ async function processAddressesBatch(
         await storage.updateAddressResult(resultEntry.id, { status: "processing" });
 
         try {
-          // Make API call to Sparkscan with retry logic
-          const apiUrl = `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`;
-          console.log(`Making API call to: ${apiUrl}`);
+          // Make API call to Hiro Stacks API with retry logic
+          const apiUrl = `https://api.hiro.so/extended/v1/address/${address}/balances`;
+          console.log(`Making API call to Hiro API: ${apiUrl}`);
           
           let retryCount = 0;
           const maxRetries = 3;
@@ -219,7 +222,7 @@ async function processAddressesBatch(
                 method: 'GET',
                 headers: {
                   'Accept': 'application/json',
-                  'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
+                  'User-Agent': 'Stacks-Batch-Analyzer/1.0'
                 }
               });
               
@@ -272,8 +275,8 @@ async function processAddressesBatch(
             throw new Error(lastError || `API request failed after ${maxRetries + 1} attempts`);
           }
 
-          const data: SparkscanResponse = await response.json();
-          console.log(`API response data for ${address}:`, data);
+          const data: HiroBalanceResponse = await response.json();
+          console.log(`Hiro API response data for ${address}:`, data);
 
           // Update result with success
           await storage.updateAddressResult(resultEntry.id, {

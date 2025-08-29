@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import type { BatchJob, AddressResult, SparkscanResponse, SparkscanToken } from "@shared/schema";
+import type { BatchJob, AddressResult, HiroBalanceResponse, HiroFungibleToken } from "@shared/schema";
 
 interface ResultsTableProps {
   batchJobId: string;
@@ -67,14 +67,20 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
     let bValue: any = b[sortField as keyof AddressResult];
 
     if (sortField === "totalValueUsd" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).totalValueUsd;
-      bValue = (b.data as SparkscanResponse).totalValueUsd;
+      // For Hiro API, calculate total value from STX balance and tokens
+      const aData = a.data as HiroBalanceResponse;
+      const bData = b.data as HiroBalanceResponse;
+      aValue = parseFloat(aData.stx.balance) / 1000000; // Convert microSTX to STX
+      bValue = parseFloat(bData.stx.balance) / 1000000;
     } else if (sortField === "transactionCount" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).transactionCount;
-      bValue = (b.data as SparkscanResponse).transactionCount;
+      // Transaction count not available in Hiro balance API
+      aValue = 0;
+      bValue = 0;
     } else if (sortField === "tokenCount" && a.data && b.data) {
-      aValue = (a.data as SparkscanResponse).tokenCount;
-      bValue = (b.data as SparkscanResponse).tokenCount;
+      const aData = a.data as HiroBalanceResponse;
+      const bData = b.data as HiroBalanceResponse;
+      aValue = Object.keys(aData.fungible_tokens).length;
+      bValue = Object.keys(bData.fungible_tokens).length;
     }
 
     if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
@@ -85,10 +91,16 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
   const getTargetTokenBalance = (result: AddressResult): { balance: number; ticker: string; decimals: number } | null => {
     if (!result.data || !batchJob?.targetTokenAddress) return null;
     
-    const data = result.data as SparkscanResponse;
-    const targetToken = data.tokens?.find(token => token.tokenAddress === batchJob.targetTokenAddress);
+    const data = result.data as HiroBalanceResponse;
+    const targetToken = data.fungible_tokens[batchJob.targetTokenAddress];
     
-    return targetToken ? { balance: targetToken.balance, ticker: targetToken.ticker, decimals: targetToken.decimals } : null;
+    if (targetToken) {
+      // For FSPKS token, extract balance as number
+      const balance = parseFloat(targetToken.balance);
+      return { balance, ticker: "FSPKS", decimals: 6 };
+    }
+    
+    return null;
   };
 
   const formatBalance = (balance: number, decimals: number = 0): string => {
@@ -211,7 +223,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
             </TableHeader>
             <TableBody>
               {sortedResults.map((result) => {
-                const data = result.data as SparkscanResponse | null;
+                const data = result.data as HiroBalanceResponse | null;
                 const targetToken = getTargetTokenBalance(result);
                 const isExpanded = expandedRows.has(result.id);
                 
@@ -241,11 +253,11 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           </div>
                         ) : data ? (
                           <div>
-                            <p className="text-sm font-medium text-foreground" data-testid={`text-btc-balance-${result.id}`}>
-                              {data.balance.btcHardBalanceSats} sats
+                            <p className="text-sm font-medium text-foreground" data-testid={`text-stx-balance-${result.id}`}>
+                              {(parseFloat(data.stx.balance) / 1000000).toFixed(6)} STX
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              ${data.balance.btcValueUsdHard.toFixed(2)}
+                              {data.stx.locked !== "0" ? `Locked: ${(parseFloat(data.stx.locked) / 1000000).toFixed(6)} STX` : "Unlocked"}
                             </p>
                           </div>
                         ) : (
@@ -253,14 +265,14 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-foreground" data-testid={`text-token-count-${result.id}`}>
-                        {data?.tokenCount || "-"}
+                        {data ? Object.keys(data.fungible_tokens).length : "-"}
                       </TableCell>
                       <TableCell className="text-sm text-foreground" data-testid={`text-transaction-count-${result.id}`}>
-                        {data?.transactionCount?.toLocaleString() || "-"}
+                        N/A
                       </TableCell>
                       <TableCell>
                         <span className="text-sm font-medium text-foreground" data-testid={`text-total-value-${result.id}`}>
-                          ${data?.totalValueUsd?.toFixed(2) || "0.00"}
+                          {data ? `$${(parseFloat(data.stx.balance) / 1000000 * 0.5).toFixed(2)} (est.)` : "$0.00"}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -296,39 +308,39 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                           <div className="space-y-4">
                             <h4 className="font-medium text-foreground">Token Details</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {data.tokens?.map((token: SparkscanToken) => (
-                                <Card key={token.tokenIdentifier} className="bg-background border border-border">
+                              {Object.entries(data.fungible_tokens).map(([contractId, token]) => (
+                                <Card key={contractId} className="bg-background border border-border">
                                   <CardContent className="p-4">
                                     <div className="flex items-center justify-between mb-2">
-                                      <h5 className="font-medium text-foreground" data-testid={`text-token-name-${token.tokenIdentifier}`}>
-                                        {token.name}
+                                      <h5 className="font-medium text-foreground" data-testid={`text-token-name-${contractId}`}>
+                                        {contractId.split('.')[1] || contractId}
                                       </h5>
-                                      <Badge className="bg-primary/10 text-primary" data-testid={`badge-token-ticker-${token.tokenIdentifier}`}>
-                                        {token.ticker}
+                                      <Badge className="bg-primary/10 text-primary" data-testid={`badge-token-ticker-${contractId}`}>
+                                        TOKEN
                                       </Badge>
                                     </div>
                                     <div className="space-y-1 text-sm">
                                       <div className="flex justify-between">
                                         <span className="text-muted-foreground">Balance:</span>
-                                        <span className="font-medium text-foreground" data-testid={`text-token-balance-${token.tokenIdentifier}`}>
-                                          {formatBalance(token.balance, token.decimals)}
+                                        <span className="font-medium text-foreground" data-testid={`text-token-balance-${contractId}`}>
+                                          {parseFloat(token.balance).toLocaleString()}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
                                         <span className="text-muted-foreground">Decimals:</span>
-                                        <span className="text-foreground" data-testid={`text-token-decimals-${token.tokenIdentifier}`}>
-                                          {token.decimals}
+                                        <span className="text-foreground" data-testid={`text-token-decimals-${contractId}`}>
+                                          N/A
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
                                         <span className="text-muted-foreground">Value USD:</span>
-                                        <span className="text-foreground" data-testid={`text-token-value-${token.tokenIdentifier}`}>
-                                          ${token.valueUsd.toFixed(2)}
+                                        <span className="text-foreground" data-testid={`text-token-value-${contractId}`}>
+                                          N/A
                                         </span>
                                       </div>
                                       <div className="mt-2 pt-2 border-t border-border">
-                                        <p className="text-xs text-muted-foreground break-all" data-testid={`text-token-address-${token.tokenIdentifier}`}>
-                                          {token.tokenAddress}
+                                        <p className="text-xs text-muted-foreground break-all" data-testid={`text-token-address-${contractId}`}>
+                                          {contractId}
                                         </p>
                                       </div>
                                     </div>
