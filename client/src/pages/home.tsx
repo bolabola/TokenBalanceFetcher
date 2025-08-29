@@ -4,6 +4,7 @@ import AddressInput from "@/components/address-input";
 import ProgressSection from "@/components/progress-section";
 import SummaryStats from "@/components/summary-stats";
 import ResultsTable from "@/components/results-table";
+import LogDisplay from "@/components/log-display";
 
 export default function Home() {
   const [activeBatchJobId, setActiveBatchJobId] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export default function Home() {
           <>
             <ProgressSection batchJobId={activeBatchJobId} />
             <SummaryStats batchJobId={activeBatchJobId} />
+            <LogDisplay batchJobId={activeBatchJobId} />
             <ResultsTable batchJobId={activeBatchJobId} />
           </>
         )}

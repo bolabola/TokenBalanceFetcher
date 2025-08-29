@@ -72,9 +72,14 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
   };
 
   const handleStartAnalysis = async () => {
+    const logger = (window as any).sparkScanLogger;
+    
+    logger?.info("Starting batch analysis...");
     const addressList = parseAddresses(addresses);
+    logger?.info(`Parsed ${addressList.length} valid addresses`, `Selected tokens: ${selectedTokens.length}`);
     
     if (addressList.length === 0) {
+      logger?.error("No valid addresses found", "Please check address format (must start with 'sp')");
       toast({
         title: "No valid addresses",
         description: "Please enter at least one valid Sparkscan address (starting with 'sp')",
@@ -88,14 +93,18 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
       const targetTokenAddress = selectedTokens.length > 0 ? selectedTokens[0] : 
                                 (customTokenAddress ? customTokenAddress : undefined);
       
+      logger?.info("Creating batch job...", `Rate limit: ${rateLimit} req/sec`);
       const batchJob = await createBatchMutation.mutateAsync({
         name: `Batch ${new Date().toLocaleString()}`,
         targetTokenAddress: targetTokenAddress,
         rateLimit: parseInt(rateLimit),
         totalAddresses: addressList.length,
       });
+      
+      logger?.success(`Batch job created: ${batchJob.id}`, `Processing ${addressList.length} addresses`);
 
       // Start processing
+      logger?.info("Starting address processing...", "API calls will begin shortly");
       await processBatchMutation.mutateAsync({
         batchJobId: batchJob.id,
         addresses: addressList,
@@ -103,11 +112,13 @@ export default function AddressInput({ onBatchCreated, onBatchCleared }: Address
 
       onBatchCreated(batchJob.id);
       
+      logger?.success("Batch processing initiated", "Monitor progress below");
       toast({
         title: "Batch processing started",
         description: `Processing ${addressList.length} addresses...`,
       });
     } catch (error) {
+      logger?.error("Failed to start analysis", error instanceof Error ? error.message : "Unknown error");
       toast({
         title: "Failed to start analysis",
         description: "Please try again.",

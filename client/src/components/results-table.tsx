@@ -12,6 +12,12 @@ interface ResultsTableProps {
   batchJobId: string;
 }
 
+// Utility function to format address display
+const formatAddress = (address: string): string => {
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 export default function ResultsTable({ batchJobId }: ResultsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -219,8 +225,8 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         <div className="flex items-center space-x-3">
                           <div className={`w-2 h-2 rounded-full ${getStatusColor(result.status).replace('bg-', 'bg-').replace('text-', '')}`} />
                           <div>
-                            <p className="text-sm font-medium text-foreground break-all" data-testid={`text-address-${result.id}`}>
-                              {result.address}
+                            <p className="text-sm font-medium text-foreground" data-testid={`text-address-${result.id}`} title={result.address}>
+                              {formatAddress(result.address)}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {result.processedAt ? `Processed ${new Date(result.processedAt).toLocaleTimeString()}` : "Pending"}
