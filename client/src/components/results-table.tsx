@@ -134,7 +134,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
         </div>
 
         <div className="overflow-x-auto max-w-full">
-          <Table className="table-auto">
+          <Table style={{width: 'auto', tableLayout: 'fixed'}} className="border-separate" data-compact="true">
             <TableHeader>
               <TableRow className="bg-muted">
                 <TableHead className="text-xs font-medium px-1">Address</TableHead>

@@ -99,3 +99,23 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+@layer components {
+  [data-compact="true"] {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: auto;
+  }
+  
+  [data-compact="true"] th,
+  [data-compact="true"] td {
+    padding: 0.25rem 0.125rem !important;
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+  [data-compact="true"] th {
+    width: auto;
+    min-width: fit-content;
+  }
+}
