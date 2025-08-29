@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown, ChevronUp, Search, Download, ArrowUpDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -210,9 +210,8 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                 const isExpanded = expandedRows.has(result.id);
                 
                 return (
-                  <>
+                  <React.Fragment key={result.id}>
                     <TableRow 
-                      key={result.id} 
                       className="hover:bg-muted/50 transition-colors"
                       data-testid={`row-address-${result.id}`}
                     >
@@ -336,7 +335,7 @@ export default function ResultsTable({ batchJobId }: ResultsTableProps) {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </TableBody>

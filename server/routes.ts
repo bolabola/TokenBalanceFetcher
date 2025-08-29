@@ -185,7 +185,8 @@ async function processAddressesBatch(
   console.log(`processAddressesBatch started for job ${batchJobId} with ${addresses.length} addresses`);
   
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  const requestDelay = Math.ceil(1000 / rateLimit); // Convert rate limit to delay between requests
+  // Use a more conservative rate limit - minimum 2 seconds between requests
+  const requestDelay = Math.max(2000, Math.ceil(1000 / rateLimit));
 
   let processedCount = 0;
   let successCount = 0;
@@ -203,22 +204,41 @@ async function processAddressesBatch(
         await storage.updateAddressResult(resultEntry.id, { status: "processing" });
 
         try {
-          // Make API call to Sparkscan
+          // Make API call to Sparkscan with retry logic
           const apiUrl = `https://www.sparkscan.io/api/v1/address/${address}?network=MAINNET`;
           console.log(`Making API call to: ${apiUrl}`);
           
-          const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
+          let retryCount = 0;
+          const maxRetries = 3;
+          let response: Response;
+          
+          while (retryCount <= maxRetries) {
+            response = await fetch(apiUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Sparkscan-Batch-Analyzer/1.0'
+              }
+            });
+            
+            console.log(`API response status: ${response.status} (attempt ${retryCount + 1})`);
+            
+            if (response.status === 429) {
+              // Rate limited, wait longer and retry
+              const retryDelay = 5000 * (retryCount + 1); // Exponential backoff
+              console.log(`Rate limited, waiting ${retryDelay}ms before retry...`);
+              if (retryCount < maxRetries) {
+                await delay(retryDelay);
+                retryCount++;
+                continue;
+              }
             }
-          });
-
-          console.log(`API response status: ${response.status}`);
-
-          if (!response.ok) {
-            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            
+            if (!response.ok) {
+              throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            }
+            
+            break;
           }
 
           const data: SparkscanResponse = await response.json();
@@ -252,8 +272,9 @@ async function processAddressesBatch(
         failedLookups: failedCount,
       });
 
-      // Rate limiting delay
+      // Rate limiting delay - always wait between requests
       if (processedCount < addresses.length) {
+        console.log(`Waiting ${requestDelay}ms before next request...`);
         await delay(requestDelay);
       }
     } catch (error) {
